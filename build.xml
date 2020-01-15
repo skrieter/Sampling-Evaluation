@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project name="FIDE Tools" default="jar" basedir=".">
+
+	<!-- Copy from build_jar_template.properties and edit accordingly -->
+	<property file = "build_jar.properties"/>
+
+	<property name="lib" value="lib"/>
+	<property name="build.dir" value="build"/>
+	<property name="build.lib" value="${build.dir}/jar/lib"/>
+	<property name="extern.lib" value="build/jar/lib"/>
+	<property name="extern.jar" value="build/jar/de.ovgu.featureide.lib.benchmark.jar"/>
+
+	<target name="jar">
+		<subant target="">
+			<fileset dir="${fm.benchmark.path}" includes="build.xml" />
+		</subant>
+		<copy file="${fm.benchmark.path}/${extern.jar}" todir="${build.lib}" />
+		<copy todir="${build.lib}">
+			<fileset dir="${lib}" />
+		</copy>
+		<copy todir="${build.lib}">
+			<fileset dir="${fm.benchmark.path}/${extern.lib}" />
+		</copy>
+
+		<path id="build-classpath">
+		    <fileset dir="${build.lib}">
+		        <include name="**/*.jar"/>
+		    </fileset>
+		</path>
+
+		<mkdir dir="${build.dir}/classes" />
+		<javac
+			srcdir="src"
+			destdir="${build.dir}/classes"
+			includeantruntime="false"
+			debug="on"
+			source="1.8"
+			target="1.8"
+			fork="yes"
+			executable="${bin.javac.path}">
+			<classpath refid="build-classpath" />
+		</javac>
+		
+		<manifestclasspath property="lib.list" jarfile="pc_sampling_evaluation.jar">
+		    <classpath refid="build-classpath"/>
+		</manifestclasspath>
+		
+		<echo message="${lib.list}"/>
+		
+		<mkdir dir="${build.dir}/jar" />
+		<jar destfile="${build.dir}/jar/pc_sampling_evaluation.jar" basedir="build/classes" compress="true">
+			<manifest>
+				<attribute name="Main-Class" value="de.ovgu.featureide.fm.benchmark.Dispatcher"/>
+				<attribute name="Class-Path" value="${lib.list}"/>
+			</manifest>
+		</jar>
+
+		<copy file="${build.dir}/jar/pc_sampling_evaluation.jar" todir="" />
+	</target>
+
+</project>
