@@ -1,2 +1,8 @@
-/config.properties
-/models.txt
+config.properties
+paths.properties
+1_extract.properties
+2_convert.properties
+3_group.properties
+4_sample.properties
+5_eval.properties
+models.txt

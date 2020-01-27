@@ -23,16 +23,12 @@ import org.prop4j.Node;
 import org.prop4j.NodeReader;
 import org.prop4j.NodeReader.ErrorHandling;
 
-import de.ovgu.featureide.fm.benchmark.ABenchmark;
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.analysis.cnf.ClauseList;
 import de.ovgu.featureide.fm.core.analysis.cnf.IVariables;
 import de.ovgu.featureide.fm.core.analysis.cnf.Nodes;
 import de.ovgu.featureide.fm.core.analysis.cnf.Variables;
-import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
-import de.ovgu.featureide.fm.core.analysis.cnf.formula.NoAbstractCNFCreator;
 import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationGenerator;
-import de.ovgu.featureide.fm.core.base.IFeatureModel;
 import de.ovgu.featureide.sampling.eval.analyzer.FileProvider;
 import de.ovgu.featureide.sampling.eval.analyzer.ISourceCodeAnalyzer;
 import de.ovgu.featureide.sampling.eval.analyzer.PCLocatorWrapper;
@@ -55,11 +51,6 @@ public class PCProcessor {
 	public Function<PresenceCondition, ?> allGrouper = pc -> idObject;
 	public Function<PresenceCondition, ?> fileGrouper = PresenceCondition::getFilePath;
 	public Function<PresenceCondition, ?> folderGrouper = pc -> pc.getFilePath().getParent();
-
-	public CNF readModel(ABenchmark<?> benchmark, String name) throws Exception {
-		final IFeatureModel fm = benchmark.init(name);
-		return fm == null ? null : new FeatureModelFormula(fm).getElement(new NoAbstractCNFCreator()).normalize();
-	}
 
 	public PresenceConditionList convert() {
 		if (!Constants.useSrcml) {
@@ -123,11 +114,10 @@ public class PCProcessor {
 	}
 
 	public boolean extract() {
-
-		if (Files.isReadable(systemPath)) {
-			try {
-				Path outputPath = Constants.presenceConditionsOutput.resolve(systemPath.getFileName());
-				Files.createDirectories(outputPath);
+		try {
+			Path outputPath = Constants.presenceConditionsOutput.resolve(systemPath.getFileName());
+			Files.createDirectories(outputPath);
+			if (Files.isReadable(systemPath)) {
 				if (!Constants.useSrcml) {
 					FileProvider fileProvider = new FileProvider(systemPath);
 					fileProvider.setFileNameRegex(FileProvider.CFileRegex);
@@ -141,16 +131,9 @@ public class PCProcessor {
 				rawPcs.forEach(pc -> System.out.println("\t" + pc.getFormula()));
 				rawPcs.close();
 				return true;
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
-		} else {
-			try {
-				Path outputPath = Constants.presenceConditionsOutput.resolve(systemPath.getFileName());
-				Files.createDirectories(outputPath);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -160,7 +143,8 @@ public class PCProcessor {
 		try {
 			pcList = PresenceConditionList.readPCList(systemPath.getFileName().toString(),
 					fmFormula != null ? Constants.convertedPCFMFileName : Constants.convertedPCFileName);
-		} catch (FileNotFoundException e) {} catch (IOException e) {
+		} catch (FileNotFoundException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		if (pcList == null) {
@@ -178,14 +162,16 @@ public class PCProcessor {
 		try {
 			pcList = PresenceConditionList.readPCList(systemPath.getFileName().toString(),
 					fmFormula != null ? Constants.convertedPCFMFileName : Constants.convertedPCFileName);
-		} catch (FileNotFoundException e) {} catch (IOException e) {
+		} catch (FileNotFoundException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		if (pcList == null) {
 			return null;
 		}
 		final IVariables newVariables = pcList.getFormula().getVariables();
-		List<List<ClauseList>> convertLiterals = TWiseConfigurationGenerator.convertLiterals(newVariables.getLiterals());
+		List<List<ClauseList>> convertLiterals = TWiseConfigurationGenerator
+				.convertLiterals(newVariables.getLiterals());
 
 		final Expressions expressions = new Expressions();
 		expressions.setExpressions(convertLiterals);
@@ -199,15 +185,18 @@ public class PCProcessor {
 		}
 		PresenceConditionList pcList = null;
 		try {
-			pcList = PresenceConditionList.readPCList(systemPath.getFileName().toString(), Constants.convertedPCFMFileName);
-		} catch (FileNotFoundException e) {} catch (IOException e) {
+			pcList = PresenceConditionList.readPCList(systemPath.getFileName().toString(),
+					Constants.convertedPCFMFileName);
+		} catch (FileNotFoundException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		if (pcList == null) {
 			return null;
 		}
 		final IVariables newVariables = pcList.getFormula().getVariables();
-		List<List<ClauseList>> convertLiterals = TWiseConfigurationGenerator.convertLiterals(newVariables.convertToVariables(pcList.getPCNames()));
+		List<List<ClauseList>> convertLiterals = TWiseConfigurationGenerator
+				.convertLiterals(newVariables.convertToVariables(pcList.getPCNames()));
 
 		final Expressions expressions = new Expressions();
 		expressions.setExpressions(convertLiterals);
@@ -240,7 +229,6 @@ public class PCProcessor {
 			this.fmFormula = fmFormula;
 
 			nodeReader = new NodeReader();
-			nodeReader.activateShortSymbols2();
 			nodeReader.activateJavaSymbols();
 			nodeReader.setIgnoreMissingFeatures(ErrorHandling.REMOVE);
 			nodeReader.setIgnoreUnparsableSubExpressions(ErrorHandling.REMOVE);
@@ -297,8 +285,10 @@ public class PCProcessor {
 
 	private final Stream<ClauseList> createExpression(PresenceCondition pc) {
 		Stream.Builder<ClauseList> streamBuilder = Stream.builder();
-		streamBuilder.accept(pc.getDnf().getClauses());
-		streamBuilder.accept(pc.getDnf().getClauses().negate());
+		if (pc != null && pc.getDnf() != null) {
+			streamBuilder.accept(pc.getDnf().getClauses());
+			streamBuilder.accept(pc.getDnf().getClauses().negate());
+		}
 		return streamBuilder.build().filter(list -> !list.isEmpty());
 	};
 

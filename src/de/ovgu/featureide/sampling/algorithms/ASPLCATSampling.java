@@ -57,8 +57,15 @@ public abstract class ASPLCATSampling extends ATWiseSampling {
 	}
 
 	@Override
-	public boolean parseResults() throws Exception {
+	public SolutionList parseResults() throws Exception {
+		if (!Files.isReadable(outputFile)) {
+			return null;
+		}
+
 		List<String> lines = Files.readAllLines(outputFile);
+		if (lines.isEmpty()) {
+			return null;
+		}
 
 		int numberOfConfigurations = 0;
 		String header = lines.get(0);
@@ -99,55 +106,8 @@ public abstract class ASPLCATSampling extends ATWiseSampling {
 		for (int[] configuration : configurationList) {
 			configurationList2.add(new LiteralSet(configuration, Order.INDEX));
 		}
-		result = new SolutionList(variables, configurationList2);
-		return true;
+		return new SolutionList(variables, configurationList2);
 	}
-
-//	@Override
-//	public boolean parseResults() {
-//		try {
-//			final Spliterator<String> lineIt = Files.lines(outputFile).spliterator();
-//
-//			lineIt.tryAdvance(line -> resultSize = parseHeader(line));
-//			List<int[]> configurationList = new ArrayList<>(resultSize);
-//			for (int i = 0; i < resultSize; i++) {
-//				configurationList.add(new int[cnf.getVariables().size()]);
-//			}
-//
-//			lineIt.forEachRemaining(line -> parseLine(line, configurationList));
-//
-//			final ArrayList<LiteralSet> configurationList2 = new ArrayList<>(resultSize);
-//			for (int[] configuration : configurationList) {
-//				configurationList2.add(new LiteralSet(configuration, Order.INDEX));
-//			}
-//			result = new SolutionMatrix(cnf.getVariables(), configurationList2);
-//		} catch (IOException e) {
-//			Logger.getInstance().logError(e);
-//		}
-//		return true;
-//	}
-//
-//	private int parseHeader(String header) {
-//		int length = header.length();
-//		if (length > 1) {
-//			int lastSeparatorIndex = header.lastIndexOf(';', length - 2);
-//			if (lastSeparatorIndex > -1) {
-//				String lastColumn = header.substring(lastSeparatorIndex + 1, length - 1);
-//				return Integer.parseInt(lastColumn) + 1;
-//			}
-//		}
-//		return 0;
-//	}
-//
-//	private void parseLine(String line, List<int[]> configurationList) {
-//		final String[] columns = line.split(";");
-//		final int variable = cnf.getVariables().getVariable(columns[0]);
-//		final int variableIndex = variable - 1;
-//		int columnIndex = 1;
-//		for (int[] configuration : configurationList) {
-//			configuration[variableIndex] = "X".equals(columns[columnIndex++]) ? variable : -variable;
-//		}
-//	}
 
 	@Override
 	public String getParameterSettings() {

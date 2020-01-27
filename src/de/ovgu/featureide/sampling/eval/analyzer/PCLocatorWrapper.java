@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 
 import org.prop4j.NodeReader;
 
+import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.sampling.eval.Constants;
 
 public class PCLocatorWrapper implements ISourceCodeAnalyzer {
@@ -81,9 +82,7 @@ public class PCLocatorWrapper implements ISourceCodeAnalyzer {
 				final List<String> errorLines = errors.get();
 				final List<String> outputLines = output.get();
 
-				if (errorLines.stream().anyMatch(line -> line.contains("SEVERE: "))) {
-					errorLines.stream().forEach(System.err::println);
-				}
+				errorLines.stream().forEach(Logger.getInstance()::logError);
 
 				Path filePath = file.toAbsolutePath().normalize();
 
@@ -99,7 +98,7 @@ public class PCLocatorWrapper implements ISourceCodeAnalyzer {
 				return createRawPresenceConditions(outputLines, filePath);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			Logger.getInstance().logError(e);
 			return null;
 		}
 	};

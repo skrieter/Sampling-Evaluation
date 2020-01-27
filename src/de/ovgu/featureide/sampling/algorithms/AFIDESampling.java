@@ -53,11 +53,10 @@ public abstract class AFIDESampling extends ATWiseSampling {
 	protected void addAddtionalParameters(List<String> parameters) {}
 
 	@Override
-	public boolean parseResults() {
+	public SolutionList parseResults() {
 		SolutionList configurationList = new SolutionList();
 		FileHandler.load(outputFile, configurationList, new ConfigurationListFormat());
-		result = configurationList;
-		return true;
+		return configurationList;
 	}
 
 	@Override

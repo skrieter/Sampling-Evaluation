@@ -13,3 +13,6 @@ with open(file_path + file_name, "r") as f:
 		for line in lines:
 		    line = re.sub(r"^(c\s+\d+\s+\w+)\s+.*\n$", r"\1\n", line)
 		    f.write(line)
+		    #if not re.match(r"^(c\s+\d+\s+\w+)\s+[^bool]\s*.*$", line):
+			#    line = re.sub(r"^(c\s+\d+\s+\w+)\s+bool\s*$", r"\1\n", line)
+			#    f.write(line)

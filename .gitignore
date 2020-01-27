@@ -1,6 +1,7 @@
 /.settings/
 /bin/
 /build/
+/gen/
 /.classpath
 /.project
 /build_jar.properties

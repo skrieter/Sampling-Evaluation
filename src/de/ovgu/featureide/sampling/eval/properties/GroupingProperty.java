@@ -17,5 +17,9 @@ public class GroupingProperty extends StringListProperty {
 	public GroupingProperty() {
 		super("grouping");
 	}
+	
+	public GroupingProperty(String alternateName) {
+		super(alternateName);
+	}
 
 }
