@@ -2,6 +2,7 @@
 /bin/
 /build/
 /gen/
+/lib/
 /.classpath
 /.project
 /build_jar.properties
