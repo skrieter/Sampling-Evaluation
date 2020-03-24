@@ -1,4 +1,13 @@
 #! /bin/bash
+
+function prepare {
+	sh ./systems/$1/prepare_system.sh 
+}
+
+function dl_zip {
+	unzip -uo -d ../resources systems/$1/files.zip
+}
+
 function dl_git {
 	cd ../resources/systems
 	DIR=$1

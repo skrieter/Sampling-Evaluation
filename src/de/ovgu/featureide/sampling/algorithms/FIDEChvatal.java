@@ -2,33 +2,32 @@ package de.ovgu.featureide.sampling.algorithms;
 
 import java.nio.file.Path;
 
-public class IncLing extends AFIDESampling {
+public class FIDEChvatal extends AFIDESampling {
 
-	public IncLing(Path outputFile, Path fmFile) {
+	private final int t;
+	
+	public FIDEChvatal(int t, Path outputFile, Path fmFile) {
 		super(outputFile, fmFile);
+		this.t = t;
 	}
 
 	@Override
 	protected void addCommandElements() {
 		super.addCommandElements();
 		addCommandElement("-a");
-		addCommandElement("Incling");
+		addCommandElement("Chvatal");
 		addCommandElement("-t");
-		addCommandElement(Integer.toString(2));
-		if (seed != null) {
-			addCommandElement("-s");
-			addCommandElement(seed.toString());
-		}
+		addCommandElement(Integer.toString(t));
 	}
 
 	@Override
 	public String getName() {
-		return "Incling";
+		return "FIDE-Chvatal";
 	}
 
 	@Override
 	public String getParameterSettings() {
-		return "t2";
+		return "t" + t;
 	}
 
 }

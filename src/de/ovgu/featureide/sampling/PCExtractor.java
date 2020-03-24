@@ -46,9 +46,9 @@ public class PCExtractor extends ABenchmark {
 			Logger.getInstance().logInfo("Start", false);
 
 			final int systemIndexEnd = config.systemNames.size();
-			for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
+			for (systemID = 0; systemID < systemIndexEnd; systemID++) {
 				logSystem();
-				final String systemName = config.systemNames.get(systemIndex);
+				final String systemName = config.systemNames.get(systemID);
 
 				FeatureModelReader fmReader = new FeatureModelReader();
 				fmReader.setPathToModels(config.modelPath);
@@ -76,7 +76,7 @@ public class PCExtractor extends ABenchmark {
 		for (int i = 0; i < config.systemIterations.getValue(); i++) {
 			extractionWriter.createNewLine();
 			try {
-				extractionWriter.addValue(systemIndex);
+				extractionWriter.addValue(config.systemIDs.get(systemID));
 				extractionWriter.addValue("extract");
 				extractionWriter.addValue(i);
 

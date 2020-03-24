@@ -1,7 +1,6 @@
 package de.ovgu.featureide.sampling.algorithms;
 
 import java.nio.file.Path;
-import java.util.List;
 
 public class ICPL extends ASPLCATSampling {
 
@@ -10,9 +9,10 @@ public class ICPL extends ASPLCATSampling {
 	}
 
 	@Override
-	protected void addAddtionalParameters(List<String> parameters) {
-		parameters.add("-a");
-		parameters.add("ICPL");
+	protected void addCommandElements() {
+		super.addCommandElements();
+		addCommandElement("-a");
+		addCommandElement("ICPL");
 	}
 
 	@Override

@@ -1,37 +1,35 @@
 package de.ovgu.featureide.sampling.algorithms;
 
 import java.nio.file.Path;
-import java.util.List;
 
 public class YASA extends AFIDESampling {
 
-	private final Path expressionFile;
-	private final String groupingValue;
-	private final int m;
+	private Path expressionFile;
+	private String groupingValue;
 
-	public YASA(int t, Path outputFile, Path fmFile, int m, Path expressionFile, String groupingValue) {
-		super(t, outputFile, fmFile);
-		this.expressionFile = expressionFile;
-		this.groupingValue = groupingValue;
-		this.m = m;
-	}
+	private int t;
+	private int m;
 
-	public YASA(int t, Path outputFile, Path fmFile, int m) {
-		super(t, outputFile, fmFile);
-		this.expressionFile = null;
-		this.groupingValue = "no";
-		this.m = m;
+	public YASA(Path outputFile, Path fmFile) {
+		super(outputFile, fmFile);
 	}
 
 	@Override
-	protected void addAddtionalParameters(List<String> parameters) {
-		parameters.add("-a");
-		parameters.add("YASA");
-		parameters.add("-m");
-		parameters.add(Integer.toString(m));
+	protected void addCommandElements() {
+		super.addCommandElements();
+		addCommandElement("-a");
+		addCommandElement("YASA");
+		addCommandElement("-t");
+		addCommandElement(Integer.toString(t));
+		addCommandElement("-m");
+		addCommandElement(Integer.toString(m));
 		if (expressionFile != null) {
-			parameters.add("-e");
-			parameters.add(expressionFile.toString());
+			addCommandElement("-e");
+			addCommandElement(expressionFile.toString());
+		}
+		if (seed != null) {
+			addCommandElement("-s");
+			addCommandElement(seed.toString());
 		}
 	}
 
@@ -43,6 +41,38 @@ public class YASA extends AFIDESampling {
 	@Override
 	public String getParameterSettings() {
 		return "t" + t + "_m" + m + "_" + groupingValue;
+	}
+
+	public Path getExpressionFile() {
+		return expressionFile;
+	}
+
+	public void setExpressionFile(Path expressionFile) {
+		this.expressionFile = expressionFile;
+	}
+
+	public String getGroupingValue() {
+		return groupingValue;
+	}
+
+	public void setGroupingValue(String groupingValue) {
+		this.groupingValue = groupingValue;
+	}
+
+	public int getT() {
+		return t;
+	}
+
+	public void setT(int t) {
+		this.t = t;
+	}
+
+	public int getM() {
+		return m;
+	}
+
+	public void setM(int m) {
+		this.m = m;
 	}
 
 }

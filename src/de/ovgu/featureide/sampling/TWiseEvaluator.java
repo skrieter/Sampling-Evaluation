@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,11 +16,16 @@ import de.ovgu.featureide.fm.benchmark.properties.StringListProperty;
 import de.ovgu.featureide.fm.benchmark.util.CSVWriter;
 import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
-import de.ovgu.featureide.fm.core.analysis.cnf.ClauseList;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet.Order;
-import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationStatistic;
-import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationTester;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.PresenceCondition;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.PresenceConditionManager;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationUtil;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.test.CoverageStatistic;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.test.TWiseStatisticGenerator;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.test.TWiseStatisticGenerator.ConfigurationScore;
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.test.ValidityStatistic;
+import de.ovgu.featureide.fm.core.analysis.cnf.solver.AdvancedSatSolver;
 import de.ovgu.featureide.fm.core.io.ProblemList;
 import de.ovgu.featureide.fm.core.io.dimacs.DIMACSFormatCNF;
 import de.ovgu.featureide.fm.core.io.manager.FileHandler;
@@ -45,9 +51,13 @@ public class TWiseEvaluator extends ABenchmark {
 
 	protected CSVWriter evaluationWriter;
 
-	protected CNF modelCNF;
-	protected int algorithmIndex;
-	protected List<LiteralSet> sample;
+	private CNF modelCNF;
+	private TWiseStatisticGenerator tWiseStatisticGenerator;
+
+	private List<int[]> sampleArguments;
+	private List<ValidityStatistic> sampleValidityStatistics;
+	private List<CoverageStatistic> coverageStatistics;
+	private String coverageCriterion;
 
 	public TWiseEvaluator(String configPath, String configName) throws Exception {
 		super(configPath, configName);
@@ -56,16 +66,11 @@ public class TWiseEvaluator extends ABenchmark {
 	@Override
 	protected void addCSVWriters() {
 		super.addCSVWriters();
-		ArrayList<String> dataHeader = new ArrayList<>(Arrays.asList("ModelID", "AlgorithmID", "SystemIteration"));
-		for (String tValue : coverageT.getValue()) {
-			for (String groupingValue : coverageGrouping.getValue()) {
-				dataHeader.add("coverage_" + groupingValue + "_t" + tValue);
-			}
-		}
-		evaluationWriter = addCSVWriter("evaluation.csv", dataHeader);
+		evaluationWriter = addCSVWriter("evaluation.csv", Arrays.asList("ModelID", "AlgorithmID", "SystemIteration",
+				"AlgorithmIteration", "SamplePercentage", "Criterion", "Value"));
 	}
 
-	protected final HashMap<String, List<List<ClauseList>>> expressionMap = new HashMap<>();
+	protected final HashMap<String, PresenceConditionManager> expressionMap = new HashMap<>();
 
 	@Override
 	public void run() {
@@ -82,6 +87,7 @@ public class TWiseEvaluator extends ABenchmark {
 				Logger.getInstance().logError(e);
 				return;
 			}
+			Collections.sort(dirList, (p1, p2) -> p1.getFileName().toString().compareTo(p2.getFileName().toString()));
 
 			dirList.forEach(this::readSamples);
 			Logger.getInstance().logInfo("Finished", false);
@@ -92,11 +98,14 @@ public class TWiseEvaluator extends ABenchmark {
 
 	private void readSamples(Path sampleDir) {
 		try {
-			systemIndex = Integer.parseInt(sampleDir.getFileName().toString());
+			systemID = Integer.parseInt(sampleDir.getFileName().toString());
 		} catch (Exception e) {
 			Logger.getInstance().logError(e);
 			return;
 		}
+
+		Logger.getInstance().logInfo("System " + (systemID + 1), 1, false);
+		Logger.getInstance().logInfo("Preparing...", 2, false);
 
 		final DIMACSFormatCNF format = new DIMACSFormatCNF();
 		Path modelFile = sampleDir.resolve("model." + format.getSuffix());
@@ -107,6 +116,19 @@ public class TWiseEvaluator extends ABenchmark {
 			return;
 		}
 
+		final TWiseConfigurationUtil util;
+		if (!modelCNF.getClauses().isEmpty()) {
+			util = new TWiseConfigurationUtil(modelCNF, new AdvancedSatSolver(modelCNF));
+		} else {
+			util = new TWiseConfigurationUtil(modelCNF, null);
+		}
+
+		util.computeRandomSample();
+		if (!modelCNF.getClauses().isEmpty()) {
+			util.computeMIG();
+		}
+		tWiseStatisticGenerator = new TWiseStatisticGenerator(util);
+
 		List<Path> sampleFileList;
 		try (Stream<Path> fileStream = Files.list(sampleDir)) {
 			sampleFileList = fileStream.filter(Files::isReadable).filter(Files::isRegularFile)
@@ -115,39 +137,83 @@ public class TWiseEvaluator extends ABenchmark {
 			Logger.getInstance().logError(e);
 			return;
 		}
+		Collections.sort(sampleFileList,
+				(p1, p2) -> p1.getFileName().toString().compareTo(p2.getFileName().toString()));
 
-		expressionMap.clear();
-		readExpressions(GroupingProperty.FM_ONLY);
-		readExpressions(GroupingProperty.PC_ALL_FM);
-		readExpressions(GroupingProperty.PC_FOLDER_FM);
-		readExpressions(GroupingProperty.PC_FILE_FM);
-		readExpressions(GroupingProperty.PC_VARS_FM);
-
+		Logger.getInstance().logInfo("Reading Samples...", 2, false);
+		List<List<? extends LiteralSet>> samples = new ArrayList<>(sampleFileList.size());
+		sampleArguments = new ArrayList<>(sampleFileList.size());
 		for (Path sampleFile : sampleFileList) {
-			String fileName = sampleFile.getFileName().toString();
-			String argumentString = fileName.substring(0, fileName.length() - ".sample".length());
-			String[] arguments = argumentString.split("_");
-			systemIteration = Integer.parseInt(arguments[1]);
-			algorithmIndex = Integer.parseInt(arguments[2]);
-			logRun();
 
+			final List<LiteralSet> sample;
+			int[] argumentValues;
 			try {
+				final String fileName = sampleFile.getFileName().toString();
+				final String[] arguments = fileName.substring(0, fileName.length() - ".sample".length()).split("_");
 				sample = Files.lines(sampleFile).map(this::parseConfiguration).collect(Collectors.toList());
-			} catch (IOException e) {
+
+				argumentValues = new int[4];
+				argumentValues[0] = Integer.parseInt(arguments[1]);
+				argumentValues[1] = Integer.parseInt(arguments[2]);
+				argumentValues[2] = Integer.parseInt(arguments[3]);
+				argumentValues[3] = 100;
+
+			} catch (Exception e) {
 				Logger.getInstance().logError(e);
 				continue;
 			}
+			// if Random
+			if (argumentValues[1] == 8) {
+				for (int p = 5; p <= 100; p += 5) {
+					samples.add(sample.subList(0, (sample.size() * p) / 100));
+					int[] argumentValues2 = new int[4];
+					argumentValues2[0] = argumentValues[0];
+					argumentValues2[1] = argumentValues[1];
+					argumentValues2[2] = argumentValues[2];
+					argumentValues2[3] = p;
+					sampleArguments.add(argumentValues2);
+				}
+			} else {
+				samples.add(sample);
+				sampleArguments.add(argumentValues);
+			}
+		}
 
-			writeCSV(evaluationWriter, this::writeData);
+		Logger.getInstance().logInfo("Testing Validity...", 2, false);
+		sampleValidityStatistics = tWiseStatisticGenerator.getValidity(samples);
+		for (int i = 0; i < sampleArguments.size(); i++) {
+			final int i2 = i;
+			writeCSV(evaluationWriter, writer -> writeValidity(writer, i2));
+		}
+
+		final int tSize = coverageT.getValue().size();
+		final int gSize = coverageGrouping.getValue().size();
+		int gIndex = 0;
+		for (String groupingValue : coverageGrouping.getValue()) {
+			gIndex++;
+			List<List<PresenceCondition>> nodes = readExpressions(groupingValue, util).getGroupedPresenceConditions();
+			int tIndex = 0;
+			for (String tValue : coverageT.getValue()) {
+				tIndex++;
+				logCoverage(tSize, gSize, tIndex, gIndex);
+
+				coverageCriterion = groupingValue + "_t" + tValue;
+				coverageStatistics = tWiseStatisticGenerator.getCoverage(samples, nodes, Integer.parseInt(tValue),
+						ConfigurationScore.NONE, true);
+				for (int i = 0; i < sampleArguments.size(); i++) {
+					final int i2 = i;
+					writeCSV(evaluationWriter, writer -> writeCoverage(writer, i2));
+				}
+
+			}
 		}
 	}
 
-	private Expressions readExpressions(String group) {
+	private PresenceConditionManager readExpressions(String group, TWiseConfigurationUtil util) {
 		try {
-			Expressions exp = Expressions.readConditions(config.systemNames.get(systemIndex),
+			Expressions exp = Expressions.readConditions(config.systemNames.get(config.systemIDs.indexOf(systemID)),
 					Constants.groupedPCFileName + group);
-			expressionMap.put(group, exp.getExpressions());
-			return exp;
+			return new PresenceConditionManager(util, exp.getExpressions());
 		} catch (IOException e) {
 			return null;
 		}
@@ -163,69 +229,28 @@ public class TWiseEvaluator extends ABenchmark {
 		return solution;
 	}
 
-	private void writeData(CSVWriter evaluationWriter) {
-		evaluationWriter.addValue(systemIndex);
-		evaluationWriter.addValue(systemIteration);
-		evaluationWriter.addValue(algorithmIndex);
-
-		TWiseConfigurationTester tester = new TWiseConfigurationTester(modelCNF);
-		tester.setSample(sample);
-
-		writeValidity(tester, evaluationWriter);
-
-		Logger.getInstance().logInfo("\tCalculating configuration coverage...", true);
-
-		final int tSize = coverageT.getValue().size();
-		final int gSize = coverageGrouping.getValue().size();
-		int tIndex = 0;
-		for (String tValue : coverageT.getValue()) {
-			tIndex++;
-			int gIndex = 0;
-			tester.setT(Integer.parseInt(tValue));
-			for (String groupingValue : coverageGrouping.getValue()) {
-				gIndex++;
-				logCoverage(tSize, gSize, tIndex, gIndex);
-				tester.setNodes(expressionMap.get(groupingValue));
-				writeCoverage(tester, evaluationWriter);
-			}
-		}
-		Logger.getInstance().logInfo("\t\tDone.", true);
+	private void writeValidity(CSVWriter csvWriter, int i) {
+		int[] argumentValues = sampleArguments.get(i);
+		ValidityStatistic validityStatistic = sampleValidityStatistics.get(i);
+		csvWriter.addValue(systemID);
+		csvWriter.addValue(argumentValues[1]);
+		csvWriter.addValue(argumentValues[0]);
+		csvWriter.addValue(argumentValues[2]);
+		csvWriter.addValue(argumentValues[3]);
+		csvWriter.addValue("validity");
+		csvWriter.addValue(validityStatistic.getValidInvalidRatio());
 	}
 
-	protected boolean writeValidity(TWiseConfigurationTester tester, CSVWriter csvWriter) {
-		Logger.getInstance().logInfo("\tTesting configuration validity...", true);
-		LiteralSet invalidSolution = tester.getFirstInvalidSolution();
-		boolean validity = invalidSolution == null;
-		if (validity) {
-			Logger.getInstance().logInfo("\t\tPASS", true);
-		} else {
-			Logger.getInstance().logInfo("\t\tFAIL", true);
-			Logger.getInstance().logInfo("\t\tInvalid configuration: " + invalidSolution, true);
-		}
-		csvWriter.addValue(validity);
-		return validity;
-	}
-
-	protected double writeCoverage(TWiseConfigurationTester tester, CSVWriter csvWriter) {
-		TWiseConfigurationStatistic statistics = tester.getCoverage();
-		long numberOfCoveredConditions = statistics.getNumberOfCoveredConditions();
-		long numberOfValidConditions = statistics.getNumberOfValidConditions();
-		double coverage = numberOfValidConditions == 0 ? 1
-				: (double) numberOfCoveredConditions / (double) numberOfValidConditions;
-
-		csvWriter.addValue(coverage);
-		return coverage;
-	}
-
-	private void logRun() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("System: ");
-		sb.append(systemIndex + 1);
-		sb.append(" | Iteration: ");
-		sb.append(systemIteration);
-		sb.append(" | Algorithm: ");
-		sb.append(algorithmIndex + 1);
-		Logger.getInstance().logInfo(sb.toString(), 2, false);
+	private void writeCoverage(CSVWriter csvWriter, int i) {
+		int[] argumentValues = sampleArguments.get(i);
+		CoverageStatistic coverageStatistic = coverageStatistics.get(i);
+		csvWriter.addValue(systemID);
+		csvWriter.addValue(argumentValues[1]);
+		csvWriter.addValue(argumentValues[0]);
+		csvWriter.addValue(argumentValues[2]);
+		csvWriter.addValue(argumentValues[3]);
+		csvWriter.addValue(coverageCriterion);
+		csvWriter.addValue(coverageStatistic.getCoverage());
 	}
 
 	private void logCoverage(final int tSize, final int gSize, int tIndex, int gIndex) {

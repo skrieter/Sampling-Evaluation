@@ -1,4 +1,4 @@
 #! /bin/bash
-cd subscripts/rscripts
+cd rscripts
 Rscript _main.R
 cd ../..

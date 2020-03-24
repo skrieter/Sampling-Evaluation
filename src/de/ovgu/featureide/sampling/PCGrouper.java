@@ -53,9 +53,9 @@ public class PCGrouper extends ABenchmark {
 			Logger.getInstance().logInfo("Start", false);
 
 			final int systemIndexEnd = config.systemNames.size();
-			for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
+			for (systemID = 0; systemID < systemIndexEnd; systemID++) {
 				logSystem();
-				final String systemName = config.systemNames.get(systemIndex);
+				final String systemName = config.systemNames.get(systemID);
 
 				FeatureModelReader fmReader = new FeatureModelReader();
 				fmReader.setPathToModels(config.modelPath);
@@ -95,7 +95,8 @@ public class PCGrouper extends ABenchmark {
 		for (int i = 0; i < config.systemIterations.getValue(); i++) {
 			groupingWriter.createNewLine();
 			try {
-				groupingWriter.addValue(systemIndex);
+//				groupingWriter.addValue(systemIndex);
+				groupingWriter.addValue(config.systemIDs.get(systemID));
 				groupingWriter.addValue(groupingValue);
 				groupingWriter.addValue(i);
 
@@ -130,7 +131,7 @@ public class PCGrouper extends ABenchmark {
 		}
 
 		if (expressions != null) {
-			Expressions.writeConditions(expressions, config.systemNames.get(systemIndex),
+			Expressions.writeConditions(expressions, config.systemNames.get(systemID),
 					Constants.groupedPCFileName + groupingValue);
 		}
 		return expressions;

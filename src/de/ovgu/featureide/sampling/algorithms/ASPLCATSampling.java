@@ -6,42 +6,43 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.ovgu.featureide.fm.benchmark.process.Algorithm;
 import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet.Order;
 import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList;
 import de.ovgu.featureide.fm.core.analysis.cnf.Variables;
 
-public abstract class ASPLCATSampling extends ATWiseSampling {
+public abstract class ASPLCATSampling extends Algorithm<SolutionList> {
 
 	private final Path outputFile;
 	private final Path fmFile;
 
+	protected final int t;
+
 	public ASPLCATSampling(int t, Path outputFile, Path fmFile) {
-		super(t);
 		this.outputFile = outputFile;
 		this.fmFile = fmFile;
+		this.t = t;
 	}
 
 	@Override
-	public void preProcess() {
-		parameters.clear();
-		parameters.add("java");
-		parameters.add("-da");
-		parameters.add("-Xmx12g");
-		parameters.add("-Xms2g");
-		parameters.add("-cp");
-		parameters.add("build/jar/lib/*");
-		parameters.add("no.sintef.ict.splcatool.SPLCATool");
-		parameters.add("-t");
-		parameters.add("t_wise");
-		parameters.add("-fm");
-		parameters.add(fmFile.toString());
-		parameters.add("-s");
-		parameters.add(Integer.toString(t));
-		parameters.add("-o");
-		parameters.add(outputFile.toString());
-		addAddtionalParameters(parameters);
+	protected void addCommandElements() {
+		addCommandElement("java");
+		addCommandElement("-da");
+		addCommandElement("-Xmx14g");
+		addCommandElement("-Xms2g");
+		addCommandElement("-cp");
+		addCommandElement("tools/SPLCAT/*");
+		addCommandElement("no.sintef.ict.splcatool.SPLCATool");
+		addCommandElement("-t");
+		addCommandElement("t_wise");
+		addCommandElement("-fm");
+		addCommandElement(fmFile.toString());
+		addCommandElement("-s");
+		addCommandElement(Integer.toString(t));
+		addCommandElement("-o");
+		addCommandElement(outputFile.toString());
 	}
 
 	@Override
@@ -53,11 +54,8 @@ public abstract class ASPLCATSampling extends ATWiseSampling {
 		}
 	}
 
-	protected void addAddtionalParameters(List<String> parameters) {
-	}
-
 	@Override
-	public SolutionList parseResults() throws Exception {
+	public SolutionList parseResults() throws IOException {
 		if (!Files.isReadable(outputFile)) {
 			return null;
 		}

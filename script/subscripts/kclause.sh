@@ -12,7 +12,7 @@ cd ../..
 PATH_CURRENT=$PWD
 
 # Set paths to kclause tool, system, and output directory
-PATH_EXEC=${PATH_CURRENT}/lib/Kclause/
+PATH_EXEC=${PATH_CURRENT}/script/subscripts/Kclause/
 PATH_SYSTEM=${PATH_CURRENT}/resources/systems/${PARAM_SYSTEM_NAME}/
 PATH_OUT=${PATH_CURRENT}/gen/kclause/${PARAM_SYSTEM_NAME}/
 PATH_MODELS=${PATH_CURRENT}/resources/models/${PARAM_SYSTEM_NAME}/
@@ -41,7 +41,7 @@ cd ${PATH_SYSTEM}
 cd ${SCRIPT_DIR}
 python clean_dimacs.py ${PATH_OUT} kconfig.dimacs
 
-CLEAN_FILE=systems/$1/clean.py
+CLEAN_FILE=../systems/$1/clean.py
 if [ -f "$CLEAN_FILE" ]; then
 echo ${CLEAN_FILE} 
 python ${CLEAN_FILE} ${PATH_OUT} _kconfig.dimacs

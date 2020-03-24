@@ -47,9 +47,9 @@ public class PCConverter extends ABenchmark {
 		if (config.systemIterations.getValue() > 0) {
 			Logger.getInstance().logInfo("Start", false);
 			final int systemIndexEnd = config.systemNames.size();
-			for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
+			for (systemID = 0; systemID < systemIndexEnd; systemID++) {
 				logSystem();
-				final String systemName = config.systemNames.get(systemIndex);
+				final String systemName = config.systemNames.get(systemID);
 
 				FeatureModelReader fmReader = new FeatureModelReader();
 				fmReader.setPathToModels(config.modelPath);
@@ -82,7 +82,7 @@ public class PCConverter extends ABenchmark {
 		for (int i = 0; i < config.systemIterations.getValue(); i++) {
 			conversionWriter.createNewLine();
 			try {
-				conversionWriter.addValue(systemIndex);
+				conversionWriter.addValue(config.systemIDs.get(systemID));
 				conversionWriter.addValue(fileName);
 				conversionWriter.addValue(i);
 
@@ -104,7 +104,7 @@ public class PCConverter extends ABenchmark {
 		}
 
 		if (pcList != null) {
-			PresenceConditionList.writePCList(pcList, config.systemNames.get(systemIndex), fileName);
+			PresenceConditionList.writePCList(pcList, config.systemNames.get(systemID), fileName);
 		}
 		return pcList;
 	}

@@ -1,7 +1,6 @@
 package de.ovgu.featureide.sampling.algorithms;
 
 import java.nio.file.Path;
-import java.util.List;
 
 public class Chvatal extends ASPLCATSampling {
 
@@ -10,9 +9,10 @@ public class Chvatal extends ASPLCATSampling {
 	}
 
 	@Override
-	protected void addAddtionalParameters(List<String> parameters) {
-		parameters.add("-a");
-		parameters.add("Chvatal");
+	protected void addCommandElements() {
+		super.addCommandElements();
+		addCommandElement("-a");
+		addCommandElement("Chvatal");
 	}
 
 	@Override

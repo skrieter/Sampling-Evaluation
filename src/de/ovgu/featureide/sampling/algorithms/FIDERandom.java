@@ -2,19 +2,24 @@ package de.ovgu.featureide.sampling.algorithms;
 
 import java.nio.file.Path;
 
-public class IncLing extends AFIDESampling {
+public class FIDERandom extends AFIDESampling {
 
-	public IncLing(Path outputFile, Path fmFile) {
+	public FIDERandom(Path outputFile, Path fmFile) {
 		super(outputFile, fmFile);
+	}
+
+	@Override
+	public void preProcess() throws Exception {
+		super.preProcess();
 	}
 
 	@Override
 	protected void addCommandElements() {
 		super.addCommandElements();
 		addCommandElement("-a");
-		addCommandElement("Incling");
-		addCommandElement("-t");
-		addCommandElement(Integer.toString(2));
+		addCommandElement("Random");
+		addCommandElement("-l");
+		addCommandElement(Integer.toString(limit));
 		if (seed != null) {
 			addCommandElement("-s");
 			addCommandElement(seed.toString());
@@ -23,12 +28,12 @@ public class IncLing extends AFIDESampling {
 
 	@Override
 	public String getName() {
-		return "Incling";
+		return "FIDE-Random";
 	}
 
 	@Override
 	public String getParameterSettings() {
-		return "t2";
+		return "";
 	}
 
 }

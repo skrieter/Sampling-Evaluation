@@ -3,42 +3,41 @@ package de.ovgu.featureide.sampling.algorithms;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
+import de.ovgu.featureide.fm.benchmark.process.Algorithm;
 import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList;
+import de.ovgu.featureide.fm.core.io.ProblemList;
 import de.ovgu.featureide.fm.core.io.csv.ConfigurationListFormat;
 import de.ovgu.featureide.fm.core.io.manager.FileHandler;
 
-public abstract class AFIDESampling extends ATWiseSampling {
+public abstract class AFIDESampling extends Algorithm<SolutionList> {
 
 	private final Path outputFile;
 	private final Path fmFile;
 
-	public AFIDESampling(int t, Path outputFile, Path fmFile) {
-		super(t);
+	protected Long seed;
+	protected int limit;
+
+	public AFIDESampling(Path outputFile, Path fmFile) {
 		this.outputFile = outputFile;
 		this.fmFile = fmFile;
 	}
 
 	@Override
-	public void preProcess() {
-		parameters.clear();
-		parameters.add("java");
-		parameters.add("-da");
-		parameters.add("-Xmx12g");
-		parameters.add("-Xms2g");
-		parameters.add("-cp");
-		parameters.add("build/jar/lib/*");
-		parameters.add("de.ovgu.featureide.fm.core.cli.FeatureIDECLI");
-		parameters.add("genconfig");
-		parameters.add("-t");
-		parameters.add(Integer.toString(t));
-		parameters.add("-o");
-		parameters.add(outputFile.toString());
-		parameters.add("-fm");
-		parameters.add(fmFile.toString());
-		addAddtionalParameters(parameters);
+	protected void addCommandElements() {
+		addCommandElement("java");
+		addCommandElement("-da");
+		addCommandElement("-Xmx14g");
+		addCommandElement("-Xms2g");
+		addCommandElement("-cp");
+		addCommandElement("tools/FIDE/*");
+		addCommandElement("de.ovgu.featureide.fm.core.cli.FeatureIDECLI");
+		addCommandElement("genconfig");
+		addCommandElement("-o");
+		addCommandElement(outputFile.toString());
+		addCommandElement("-fm");
+		addCommandElement(fmFile.toString());
 	}
 
 	@Override
@@ -50,18 +49,30 @@ public abstract class AFIDESampling extends ATWiseSampling {
 		}
 	}
 
-	protected void addAddtionalParameters(List<String> parameters) {}
-
 	@Override
-	public SolutionList parseResults() {
+	public SolutionList parseResults() throws IOException {
 		SolutionList configurationList = new SolutionList();
-		FileHandler.load(outputFile, configurationList, new ConfigurationListFormat());
+		ProblemList problems = FileHandler.load(outputFile, configurationList, new ConfigurationListFormat());
+		if (problems.containsError()) {
+			throw new IOException();
+		}
 		return configurationList;
 	}
 
-	@Override
-	public String getParameterSettings() {
-		return "t" + t;
+	public Long getSeed() {
+		return seed;
+	}
+
+	public void setSeed(Long seed) {
+		this.seed = seed;
+	}
+
+	public int getLimit() {
+		return limit;
+	}
+
+	public void setLimit(int limit) {
+		this.limit = limit;
 	}
 
 }
