@@ -1,11 +1,13 @@
 package de.ovgu.featureide.sampling;
 
+import java.io.IOException;
 import java.util.Arrays;
 
+import org.sk.utils.Logger;
+import org.sk.utils.io.CSVWriter;
+
 import de.ovgu.featureide.fm.benchmark.ABenchmark;
-import de.ovgu.featureide.fm.benchmark.util.CSVWriter;
 import de.ovgu.featureide.fm.benchmark.util.FeatureModelReader;
-import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.NoAbstractCNFCreator;
@@ -32,7 +34,7 @@ public class PCExtractor extends ABenchmark {
 	}
 
 	@Override
-	protected void addCSVWriters() {
+	protected void addCSVWriters() throws IOException {
 		super.addCSVWriters();
 		extractionWriter = addCSVWriter("extraction.csv",
 				Arrays.asList("ID", "Mode", "Iteration", "Time", "Size", "Error"));
@@ -43,12 +45,12 @@ public class PCExtractor extends ABenchmark {
 		super.run();
 
 		if (config.systemIterations.getValue() > 0) {
-			Logger.getInstance().logInfo("Start", false);
+			Logger.getInstance().logInfo("Start", 0);
 
 			final int systemIndexEnd = config.systemNames.size();
-			for (systemID = 0; systemID < systemIndexEnd; systemID++) {
+			for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 				logSystem();
-				final String systemName = config.systemNames.get(systemID);
+				final String systemName = config.systemNames.get(systemIndex);
 
 				FeatureModelReader fmReader = new FeatureModelReader();
 				fmReader.setPathToModels(config.modelPath);
@@ -66,9 +68,9 @@ public class PCExtractor extends ABenchmark {
 					e.printStackTrace();
 				}
 			}
-			Logger.getInstance().logInfo("Finished", false);
+			Logger.getInstance().logInfo("Finished", 0);
 		} else {
-			Logger.getInstance().logInfo("Nothing to do", false);
+			Logger.getInstance().logInfo("Nothing to do", 0);
 		}
 	}
 
@@ -76,7 +78,7 @@ public class PCExtractor extends ABenchmark {
 		for (int i = 0; i < config.systemIterations.getValue(); i++) {
 			extractionWriter.createNewLine();
 			try {
-				extractionWriter.addValue(config.systemIDs.get(systemID));
+				extractionWriter.addValue(config.systemIDs.get(systemIndex));
 				extractionWriter.addValue("extract");
 				extractionWriter.addValue(i);
 
@@ -88,7 +90,7 @@ public class PCExtractor extends ABenchmark {
 				extractionWriter.addValue(0);
 				extractionWriter.addValue(!extracted);
 
-				Logger.getInstance().logInfo("extract -> " + Double.toString((timeNeeded / 1_000_000) / 1_000.0), true);
+				Logger.getInstance().logInfo("extract -> " + Double.toString((timeNeeded / 1_000_000) / 1_000.0), 1);
 			} catch (Exception e) {
 				extractionWriter.resetLine();
 				e.printStackTrace();

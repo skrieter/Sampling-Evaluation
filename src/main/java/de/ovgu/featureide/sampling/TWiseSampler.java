@@ -14,11 +14,13 @@ import java.util.stream.Collectors;
 
 import de.ovgu.featureide.fm.benchmark.AAlgorithmBenchmark;
 import de.ovgu.featureide.fm.benchmark.process.Algorithm;
+import de.ovgu.featureide.fm.benchmark.process.ProcessRunner;
+import de.ovgu.featureide.fm.benchmark.process.Result;
 import de.ovgu.featureide.fm.benchmark.properties.IntProperty;
 import de.ovgu.featureide.fm.benchmark.properties.StringListProperty;
-import de.ovgu.featureide.fm.benchmark.util.CSVWriter;
+import org.sk.utils.io.CSVWriter;
 import de.ovgu.featureide.fm.benchmark.util.FeatureModelReader;
-import de.ovgu.featureide.fm.benchmark.util.Logger;
+import org.sk.utils.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.analysis.cnf.ClauseList;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet;
@@ -48,7 +50,7 @@ import de.ovgu.featureide.sampling.eval.analyzer.PresenceConditionList;
 import de.ovgu.featureide.sampling.eval.properties.AlgorithmProperty;
 import de.ovgu.featureide.sampling.eval.properties.GroupingProperty;
 
-public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<SolutionList>> {
+public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<SolutionList>, Result<SolutionList>> {
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2) {
@@ -79,7 +81,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 	}
 
 	@Override
-	protected void addCSVWriters() {
+	protected void addCSVWriters() throws IOException {
 		super.addCSVWriters();
 		extendCSVWriter(getModelCSVWriter(), Arrays.asList("Configurations", "FMFeatures", "FMConstraints", "FMPCs",
 				"FMPCFeatures", "PCFeatures", "PCConstraints", "PCs"));
@@ -132,7 +134,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 				case "RND": {
 					FIDERandom fideRandom = new FIDERandom(sampleFile, modelFile);
 					fideRandom.setIterations(randomIterationsProperty.getValue());
-					final String systemName = config.systemNames.get(systemID);
+					final String systemName = config.systemNames.get(systemIndex);
 					switch (systemName) {
 					case "axtls":
 						fideRandom.setLimit(50);
@@ -183,7 +185,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 
 	@Override
 	protected CNF prepareModel() throws Exception {
-		final String systemName = config.systemNames.get(systemID);
+		final String systemName = config.systemNames.get(systemIndex);
 
 		FeatureModelReader fmReader = new FeatureModelReader();
 		fmReader.setPathToModels(config.modelPath);
@@ -193,7 +195,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 		}
 		CNF modelCNF = new FeatureModelFormula(fm).getElement(new NoAbstractCNFCreator()).normalize();
 
-		curSampleDir = samplesDir.resolve(String.valueOf(config.systemIDs.get(systemID)));
+		curSampleDir = samplesDir.resolve(String.valueOf(config.systemIDs.get(systemIndex)));
 		Files.createDirectories(curSampleDir);
 		final DIMACSFormatCNF format = new DIMACSFormatCNF();
 		final Path fileName = curSampleDir.resolve("model." + format.getSuffix());
@@ -225,7 +227,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 
 	private void saveExpressions(final CNF cnf, final CNF randomCNF, String group) {
 		List<List<ClauseList>> expressionGroups = adaptConditions(cnf, randomCNF,
-				readExpressions(config.systemNames.get(systemID), group).getExpressions());
+				readExpressions(config.systemNames.get(systemIndex), group).getExpressions());
 		randomizeConditions(expressionGroups, new Random(config.randomSeed.getValue() + systemIteration));
 
 		final ExpressionGroupFormat format = new ExpressionGroupFormat();
@@ -246,10 +248,10 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 
 	@Override
 	protected void writeModel(CSVWriter modelCSVWriter) {
-		modelCSVWriter.addValue(config.systemIDs.get(systemID));
-		modelCSVWriter.addValue(config.systemNames.get(systemID));
+		modelCSVWriter.addValue(config.systemIDs.get(systemIndex));
+		modelCSVWriter.addValue(config.systemNames.get(systemIndex));
 
-		final String systemName = config.systemNames.get(systemID);
+		final String systemName = config.systemNames.get(systemIndex);
 		try {
 			PresenceConditionList pcfmList = PresenceConditionList.readPCList(systemName,
 					Constants.convertedPCFMFileName);
@@ -301,7 +303,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 		}
 		dataCSVWriter.addValue(configurationList.getSolutions().size());
 
-		writeSamples(config.systemIDs.get(systemID) + "_" + systemIteration + "_" + algorithmIndex + "_"
+		writeSamples(config.systemIDs.get(systemIndex) + "_" + systemIteration + "_" + algorithmIndex + "_"
 				+ algorithmIteration, configurationList.getSolutions());
 
 		if (Objects.equals("YASA", algorithmList.get(algorithmIndex).getName())) {
@@ -319,7 +321,7 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 			}
 		}
 
-		Logger.getInstance().logInfo("\t\tDone.", true);
+		Logger.getInstance().logInfo("\t\tDone.", 1);
 	}
 
 	@Override
@@ -378,6 +380,16 @@ public class TWiseSampler extends AAlgorithmBenchmark<SolutionList, Algorithm<So
 			sb.deleteCharAt(sb.length() - 1);
 		}
 		return sb.toString();
+	}
+
+	@Override
+	protected Result<SolutionList> getNewResult() {
+		return new Result<>();
+	}
+
+	@Override
+	protected ProcessRunner<SolutionList, Algorithm<SolutionList>, Result<SolutionList>> getNewProcessRunner() {
+		return new ProcessRunner<>();
 	}
 
 }

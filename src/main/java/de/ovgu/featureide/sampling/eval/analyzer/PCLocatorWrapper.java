@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.prop4j.NodeReader;
+import org.sk.utils.Logger;
 
-import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.sampling.eval.Constants;
 
 public class PCLocatorWrapper implements ISourceCodeAnalyzer {

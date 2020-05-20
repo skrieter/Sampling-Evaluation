@@ -1,14 +1,16 @@
 package de.ovgu.featureide.sampling;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+import org.sk.utils.Logger;
+import org.sk.utils.io.CSVWriter;
+
 import de.ovgu.featureide.fm.benchmark.ABenchmark;
-import de.ovgu.featureide.fm.benchmark.util.CSVWriter;
 import de.ovgu.featureide.fm.benchmark.util.FeatureModelReader;
-import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.analysis.cnf.ClauseList;
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
@@ -39,7 +41,7 @@ public class PCGrouper extends ABenchmark {
 	}
 
 	@Override
-	protected void addCSVWriters() {
+	protected void addCSVWriters() throws IOException {
 		super.addCSVWriters();
 		groupingWriter = addCSVWriter("grouping.csv",
 				Arrays.asList("ID", "Mode", "Iteration", "Time", "Size", "Error"));
@@ -50,12 +52,12 @@ public class PCGrouper extends ABenchmark {
 		super.run();
 
 		if (config.systemIterations.getValue() > 0) {
-			Logger.getInstance().logInfo("Start", false);
+			Logger.getInstance().logInfo("Start", 0);
 
 			final int systemIndexEnd = config.systemNames.size();
-			for (systemID = 0; systemID < systemIndexEnd; systemID++) {
+			for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 				logSystem();
-				final String systemName = config.systemNames.get(systemID);
+				final String systemName = config.systemNames.get(systemIndex);
 
 				FeatureModelReader fmReader = new FeatureModelReader();
 				fmReader.setPathToModels(config.modelPath);
@@ -84,9 +86,9 @@ public class PCGrouper extends ABenchmark {
 					e.printStackTrace();
 				}
 			}
-			Logger.getInstance().logInfo("Finished", false);
+			Logger.getInstance().logInfo("Finished", 0);
 		} else {
-			Logger.getInstance().logInfo("Nothing to do", false);
+			Logger.getInstance().logInfo("Nothing to do", 0);
 		}
 	}
 
@@ -96,7 +98,7 @@ public class PCGrouper extends ABenchmark {
 			groupingWriter.createNewLine();
 			try {
 //				groupingWriter.addValue(systemIndex);
-				groupingWriter.addValue(config.systemIDs.get(systemID));
+				groupingWriter.addValue(config.systemIDs.get(systemIndex));
 				groupingWriter.addValue(groupingValue);
 				groupingWriter.addValue(i);
 
@@ -119,7 +121,7 @@ public class PCGrouper extends ABenchmark {
 				}
 
 				Logger.getInstance()
-						.logInfo(groupingValue + " -> " + Double.toString((timeNeeded / 1_000_000) / 1_000.0), true);
+						.logInfo(groupingValue + " -> " + Double.toString((timeNeeded / 1_000_000) / 1_000.0), 1);
 			} catch (FileNotFoundException e) {
 				groupingWriter.resetLine();
 			} catch (Exception e) {
@@ -131,7 +133,7 @@ public class PCGrouper extends ABenchmark {
 		}
 
 		if (expressions != null) {
-			Expressions.writeConditions(expressions, config.systemNames.get(systemID),
+			Expressions.writeConditions(expressions, config.systemNames.get(systemIndex),
 					Constants.groupedPCFileName + groupingValue);
 		}
 		return expressions;

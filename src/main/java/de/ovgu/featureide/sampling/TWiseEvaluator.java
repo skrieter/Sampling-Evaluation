@@ -11,10 +11,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.sk.utils.Logger;
+import org.sk.utils.io.CSVWriter;
+
 import de.ovgu.featureide.fm.benchmark.ABenchmark;
 import de.ovgu.featureide.fm.benchmark.properties.StringListProperty;
-import de.ovgu.featureide.fm.benchmark.util.CSVWriter;
-import de.ovgu.featureide.fm.benchmark.util.Logger;
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet.Order;
@@ -64,7 +65,7 @@ public class TWiseEvaluator extends ABenchmark {
 	}
 
 	@Override
-	protected void addCSVWriters() {
+	protected void addCSVWriters() throws IOException {
 		super.addCSVWriters();
 		evaluationWriter = addCSVWriter("evaluation.csv", Arrays.asList("ModelID", "AlgorithmID", "SystemIteration",
 				"AlgorithmIteration", "SamplePercentage", "Criterion", "Value"));
@@ -77,7 +78,7 @@ public class TWiseEvaluator extends ABenchmark {
 		super.run();
 
 		if (config.systemIterations.getValue() > 0) {
-			Logger.getInstance().logInfo("Start", false);
+			Logger.getInstance().logInfo("Start", 0);
 
 			Path samplesDir = config.outputPath.resolve("samples");
 			List<Path> dirList;
@@ -90,22 +91,23 @@ public class TWiseEvaluator extends ABenchmark {
 			Collections.sort(dirList, (p1, p2) -> p1.getFileName().toString().compareTo(p2.getFileName().toString()));
 
 			dirList.forEach(this::readSamples);
-			Logger.getInstance().logInfo("Finished", false);
+			Logger.getInstance().logInfo("Finished", 0);
 		} else {
-			Logger.getInstance().logInfo("Nothing to do", false);
+			Logger.getInstance().logInfo("Nothing to do", 0);
 		}
 	}
 
 	private void readSamples(Path sampleDir) {
 		try {
-			systemID = Integer.parseInt(sampleDir.getFileName().toString());
+			systemIndex = config.systemIDs.indexOf(Integer.parseInt(sampleDir.getFileName().toString()));
 		} catch (Exception e) {
 			Logger.getInstance().logError(e);
 			return;
 		}
 
-		Logger.getInstance().logInfo("System " + (systemID + 1), 1, false);
-		Logger.getInstance().logInfo("Preparing...", 2, false);
+		Logger.getInstance().logInfo("System " + (systemIndex + 1), 0);
+		Logger.getInstance().incTabLevel();
+		Logger.getInstance().logInfo("Preparing...", 0);
 
 		final DIMACSFormatCNF format = new DIMACSFormatCNF();
 		Path modelFile = sampleDir.resolve("model." + format.getSuffix());
@@ -140,7 +142,7 @@ public class TWiseEvaluator extends ABenchmark {
 		Collections.sort(sampleFileList,
 				(p1, p2) -> p1.getFileName().toString().compareTo(p2.getFileName().toString()));
 
-		Logger.getInstance().logInfo("Reading Samples...", 2, false);
+		Logger.getInstance().logInfo("Reading Samples...", 0);
 		List<List<? extends LiteralSet>> samples = new ArrayList<>(sampleFileList.size());
 		sampleArguments = new ArrayList<>(sampleFileList.size());
 		for (Path sampleFile : sampleFileList) {
@@ -179,7 +181,7 @@ public class TWiseEvaluator extends ABenchmark {
 			}
 		}
 
-		Logger.getInstance().logInfo("Testing Validity...", 2, false);
+		Logger.getInstance().logInfo("Testing Validity...", 0);
 		sampleValidityStatistics = tWiseStatisticGenerator.getValidity(samples);
 		for (int i = 0; i < sampleArguments.size(); i++) {
 			final int i2 = i;
@@ -189,6 +191,7 @@ public class TWiseEvaluator extends ABenchmark {
 		final int tSize = coverageT.getValue().size();
 		final int gSize = coverageGrouping.getValue().size();
 		int gIndex = 0;
+		Logger.getInstance().incTabLevel();
 		for (String groupingValue : coverageGrouping.getValue()) {
 			gIndex++;
 			List<List<PresenceCondition>> nodes = readExpressions(groupingValue, util).getGroupedPresenceConditions();
@@ -207,11 +210,13 @@ public class TWiseEvaluator extends ABenchmark {
 
 			}
 		}
+		Logger.getInstance().decTabLevel();
+		Logger.getInstance().decTabLevel();
 	}
 
 	private PresenceConditionManager readExpressions(String group, TWiseConfigurationUtil util) {
 		try {
-			Expressions exp = Expressions.readConditions(config.systemNames.get(config.systemIDs.indexOf(systemID)),
+			Expressions exp = Expressions.readConditions(config.systemNames.get(systemIndex),
 					Constants.groupedPCFileName + group);
 			return new PresenceConditionManager(util, exp.getExpressions());
 		} catch (IOException e) {
@@ -232,7 +237,7 @@ public class TWiseEvaluator extends ABenchmark {
 	private void writeValidity(CSVWriter csvWriter, int i) {
 		int[] argumentValues = sampleArguments.get(i);
 		ValidityStatistic validityStatistic = sampleValidityStatistics.get(i);
-		csvWriter.addValue(systemID);
+		csvWriter.addValue(config.systemIDs.get(systemIndex));
 		csvWriter.addValue(argumentValues[1]);
 		csvWriter.addValue(argumentValues[0]);
 		csvWriter.addValue(argumentValues[2]);
@@ -244,7 +249,7 @@ public class TWiseEvaluator extends ABenchmark {
 	private void writeCoverage(CSVWriter csvWriter, int i) {
 		int[] argumentValues = sampleArguments.get(i);
 		CoverageStatistic coverageStatistic = coverageStatistics.get(i);
-		csvWriter.addValue(systemID);
+		csvWriter.addValue(config.systemIDs.get(systemIndex));
 		csvWriter.addValue(argumentValues[1]);
 		csvWriter.addValue(argumentValues[0]);
 		csvWriter.addValue(argumentValues[2]);
@@ -263,7 +268,7 @@ public class TWiseEvaluator extends ABenchmark {
 		sb.append(gIndex);
 		sb.append("/");
 		sb.append(gSize);
-		Logger.getInstance().logInfo(sb.toString(), 3, false);
+		Logger.getInstance().logInfo(sb.toString(), 0);
 	}
 
 }
